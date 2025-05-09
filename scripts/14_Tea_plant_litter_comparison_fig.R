@@ -16,12 +16,12 @@ se <- function(x)
   sqrt(var(x, na.rm = T) / length(x, na.rm = T))
 
 # Import Data ----
-litter <- read.csv("users/hthomas/tea/data/Litterbags.csv")
+litter <- read.csv("data/Litterbags.csv")
 litter1yr <- subset(litter, Date.of.recovery == "12/07/16")
 litter1yr$Average <- as.numeric(as.character(litter1yr$Average))
 litter1yr_leaf_K <- subset(litter1yr, Organ == "Leaf" & Origin == "K")
 
-tea <- read.csv(file = "users/hthomas/tea/data/teabag_data.csv")
+tea <- read.csv(file = "data/teabag_data.csv")
 tea$Loss <- as.numeric(as.character(tea$Loss))
 tea$Days <- as.numeric(as.character(tea$Days))
 
@@ -76,7 +76,7 @@ pdf(file = "users/hthomas/tea/figures/tea_litterbed.pdf",
     width = 6,
     height = 5)
 (
-  ggplot(tea_litter, aes(
+ tea_litter_plot <-  ggplot(tea_litter, aes(
     reorder(factor(Species), Average, median), Average * 100, fill = Type
   )) +
     geom_boxplot() +
@@ -84,7 +84,7 @@ pdf(file = "users/hthomas/tea/figures/tea_litterbed.pdf",
     theme_bw() +
     coord_cartesian(ylim = c(0, 100)) +
     scale_fill_manual(
-      values = c("# 00b100", "goldenrod", "# 9A0C0C"),
+      values = c("#00b100", "goldenrod", "#9A0C0C"),
       name = ""
     ) +
     theme_bw() + theme(
@@ -112,3 +112,91 @@ ggplot(litter1yr, aes(reorder(factor(Species), Average, median), Average, fill =
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
+
+
+
+
+#### supplmentary C:n ration, C N content comparison with tundra trait database ####
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+library(ggrepel)
+studied_species <- c("Silene acaulis","Ledum palustre","Salix pulchra","Salix arctica",
+                     "Salix glauca", "Betula glandulosa","Festuca rubra","Petasites frigidus","Equisetum arvense")
+
+TTT_traits <- fread(file.path("data","TTT_cleaned_dataset_v1.csv"))
+
+unique(TTT_traits$Trait)
+
+TTT_traits_CN <- TTT_traits[Trait%in% c("Leaf carbon (C) content per leaf dry mass",
+                                        "Leaf nitrogen (N) content per leaf dry mass",
+                                        "Leaf nitrogen/phosphorus (N/P) ratio"),]
+
+TTT_traits_CN <- dcast(TTT_traits_CN , AccSpeciesName ~ Trait ,value.var = "Value" ,fun.aggregate = mean)
+
+TTT_traits_CN <- TTT_traits_CN[complete.cases(TTT_traits_CN[,c("Leaf carbon (C) content per leaf dry mass",
+                                                               "Leaf nitrogen (N) content per leaf dry mass")]),]
+colnames(TTT_traits_CN) <- c("species_name","C_content","N_content","CN_ratio")
+
+
+TTT_traits_CN_species <- TTT_traits_CN[species_name%in% studied_species,]
+
+
+### teabag data ####
+# green
+2.019 - 0.246 
+
+teabag_dt <- data.table(species_name= c("green tea","rooibos tea"), 
+                        C_content= c(49.055,50.511)*10, 
+                        N_content= c(4.02,1.185)*10, CN_ratio= c(12.23,42.87))
+
+
+(tundra_species_C_N_plot <- ggplot(TTT_traits_CN,aes(x=C_content/10,y=N_content/10))+
+  geom_point(color="grey70") +
+  geom_point(data = TTT_traits_CN_species,fill="cadetblue",size=3,pch=21) +
+  geom_text_repel(data = rbind(teabag_dt,TTT_traits_CN_species),aes(label =species_name ),size= 4,nudge_y = 0.25,min.segment.length = 0.75,fontface= c("plain" ,"plain",rep("italic",9 ))) +
+  geom_point(data=teabag_dt,aes(fill=species_name),size=4,pch=21,alpha=0.85,show.legend = F)+
+  scale_fill_manual(values =c("#00b100","#9A0C0C"))+
+  theme_bw() + 
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    legend.position = c(0.15,0.8)
+  )+
+  labs(fill = "Tea types",x = "Carbon content (%)",y = "Nitrogen content (%)")+
+  scale_y_continuous(limits = c(0,6)))
+
+ggplot(TTT_traits_CN,aes(x=CN_ratio,y=N_content/10,fill=CN_ratio))+
+  geom_point(pch=21) +
+  geom_point(data = TTT_traits_CN_species,size=3,pch=21) +
+  geom_point(data=teabag_dt,size=4,pch=21)+
+  scale_fill_viridis_c()+
+  theme_bw() + 
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  )
+
+ggplot(TTT_traits_CN,aes(x =CN_ratio))+ 
+  geom_histogram(fill="grey78",color="grey20",origin = 5,binwidth = 1)+
+  theme_bw()+ 
+  geom_vline(xintercept = teabag_dt$CN_ratio)+
+  theme(    panel.border = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.line = element_line(colour = "black") )
+
+pdf(file = "figures/tea_C_N_content.pdf",width = 6,height = 4)
+tundra_species_C_N_plot
+dev.off()
+
+svg(file = "figures/tea_C_N_content.svg",width = 6,height = 4)
+tundra_species_C_N_plot
+dev.off()
+
+
+ggarrange(tea_litter_plot,tundra_species_C_N_plot,nrow=2 )
