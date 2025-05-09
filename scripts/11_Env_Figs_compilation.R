@@ -1,8 +1,8 @@
 # Tea - Figure compiling script
 # Sleeping willow should have paid more attention at Coding Club
-
+season_narm_r_air
 rm(list = ls())
-
+CHELSA_summer_temp
 # Detach packages ----
 detachAllPackages <- function() {
   basic.packages <-
@@ -35,10 +35,11 @@ library(gridExtra)
 library(lme4)
 library(effects)
 library(MCMCglmm)
-
+library(data.table)
+library(ggplot2)
 # Read in tea
 tea <-
-  read.csv("users/hthomas/tea/data/combined_tea.csv", stringsAsFactors = F)
+  read.csv("data/combined_tea.csv", stringsAsFactors = F)
 
 # Remove daily tea - too confusing!
 tea <- subset(tea, !grepl("CG_DT_HT", tea$Plot))
@@ -218,6 +219,13 @@ season_narm_r$airtemp_sd_region[season_narm_r$airtemp_sd_region == 0] <-
 season_narm_r$airtemp_sd_region[is.na(season_narm_r$airtemp_sd_region)] <-
   0.01
 
+
+
+count.plots <- plyr::ddply(season_narm_r, c("ESA_cell"), summarise, n.plots = length(unique(Plot)))
+season_narm_r$MultiplePlots_Region <- ifelse(season_narm_r$ESA_cell %in% count.plots$ESA_cell[count.plots$n.plots > 1], 1, 0)
+
+
+
 # Add mean days per region
 season_narm_r <- season_narm_r %>%
   dplyr::group_by(SiteNum) %>%
@@ -308,10 +316,31 @@ jags.dat_air <- jags.dat
 
 # Load figure data
 
-load("users/hthomas/tea/Stan_outputs/airtemp_only_fits_summer.Rdata")
-load("users/hthomas/tea/Stan_outputs/airtemp_only_preds_summer.Rdata")
+parameter_air <- data.table(readRDS("Stan_outputs/parameter_sample/airtemp_sites_parameter_poly.Rdata"))
+parameter_air[grepl("gamma5",name),quantile(parameter,c(0.025,0.05,0.1,0.9,0.95,0.975)),by = name]
 
-predsout.space_air <- cout[cout$Param %in% c("preds"), ]
+load("Stan_outputs/airtemp_only_fits_summer.Rdata")
+predsout.space_air <-  cout[cout$Param %in% c("preds") , ]
+load("Stan_outputs/airtemp_only_fits_summer_poly.Rdata")
+load("Stan_outputs/airtemp_only_preds_summer_poly.Rdata")
+
+
+
+
+cout[cout$Param %in% c("gamma0","gamma1","gamma2","gamma3","gamma5"),] #these will tell you about the "significance" of your environmental predictors
+cout[cout$Param %in% c("gamma5"),] 
+cout[cout$Param %in% c("gamma0","gamma1","gamma5"),] #these will tell you about the "significance" of your environmental predictors
+View(cout[cout$Param %in% c("gamma0","gamma1","gamma5"),] )
+
+cout <-  cout[cout$Param %in% c("preds") , ]
+predsout.space_air[grepl(",1",rownames(predsout.space_air)),] <- cout[grepl(",1",rownames(cout)),]
+
+
+
+# 
+# load("Stan_outputs/airtemp_only_preds_summer.Rdata")
+# load("Stan_outputs/airtemp_only_preds_summer_poly.Rdata")
+
 predsout.space_air$airtemp <- rep(jags.dat_air$xhat1, each = 2)
 predsout.space_air$Temp <- rep(jags.dat_air$xhat2, each = 2)
 predsout.space_air$Tea_TypeNum <-
@@ -618,9 +647,25 @@ jags.dat_soil <- jags.dat
 
 # Load figure data
 
-load("users/hthomas/tea/Stan_outputs/soiltemp_fits.Rdata")
+parameter_air <- data.table(readRDS("Stan_outputs/parameter_sample/soiltemp_summer_parameter_poly.Rdata"))
+parameter_air[grepl("gamma5",name),quantile(parameter,c(0.025,0.05,0.1,0.9,0.95,0.975)),by = name]
 
-predsout.space_soil <- cout[cout$Param %in% c("preds"), ]
+cout[cout$Param %in% c("gamma0","gamma1","gamma2","gamma3","gamma5"),] #these will tell you about the "significance" of your environmental predictors
+cout[cout$Param %in% c("gamma5"),] #these will tell you about the "significance" of your environmental predictors
+
+## green is significant, rooibos isn't
+
+load("Stan_outputs/soiltemp_fits.Rdata")
+predsout.space_soil <- cout[cout$Param %in% c("preds") , ][,]
+
+load("Stan_outputs/soiltemp_fits_summer_poly.Rdata")
+## we replace the lienar green fit with the polynomial one
+cout <-  cout[cout$Param %in% c("preds") , ]
+predsout.space_soil[grepl(",1",rownames(predsout.space_soil)),] <- cout[grepl(",1",rownames(cout)),]
+
+
+
+
 predsout.space_soil$soiltemp <- rep(jags.dat_soil$xhat1, each = 2)
 predsout.space_soil$Temp <- rep(jags.dat_soil$xhat2, each = 2)
 predsout.space_soil$Tea_TypeNum <-
@@ -994,10 +1039,25 @@ str(jags.dat)
 jags.dat_moisture <- jags.dat
 
 # Load figure data
+parameter_moist <- data.table(readRDS("Stan_outputs/parameter_sample/moisture_summer_parameter_poly.Rdata"))
+parameter_moist[grepl("gamma5",name),quantile(parameter,c(0.025,0.05,0.1,0.9,0.95,0.975)),by = name]
 
-load("users/hthomas/tea/Stan_outputs/moisture_fits_summer.Rdata")
 
-predsout.space_moisture <- cout[cout$Param %in% c("preds"), ]
+
+load("Stan_outputs/moisture_fits_summer.Rdata")
+predsout.space_moisture <- cout[cout$Param %in% c("preds") , ]
+load("Stan_outputs/moisture_fits_summer_poly.Rdata")
+
+cout[cout$Param %in% c("gamma0","gamma1","gamma2","gamma3","gamma5"),] #these will tell you about the "significance" of your environmental predictors
+cout[cout$Param %in% c("gamma5"),] #these will tell you about the "significance" of your environmental predictors
+
+## green is significant, rooibos isn't
+## we replace the lienar green fit with the polynomial one
+cout <-  cout[cout$Param %in% c("preds") , ]
+predsout.space_moisture[grepl(",1",rownames(predsout.space_moisture)),] <-  cout[grepl(",1",rownames(cout)),]
+
+#predsout.space_moisture <- cout[cout$Param %in% c("preds") , ]
+  
 predsout.space_moisture$moisture <-
   rep(jags.dat_moisture$xhat1, each = 2)
 predsout.space_moisture$Temp <-
@@ -1314,8 +1374,17 @@ str(jags.dat)
 jags.dat_CHELSA_summer_temp <- jags.dat
 
 # Load figure data
+parameter_chsummer <- data.table(readRDS("Stan_outputs/parameter_sample/CH_temp_parameter_poly.Rdata"))
+parameter_chsummer[grepl("gamma5",name),quantile(parameter,c(0.025,0.05,0.1,0.9,0.95,0.975)),by = name]
 
-load("users/hthomas/tea/Stan_outputs/CHELSA_summer_temp_fits_summer.Rdata")
+
+load("Stan_outputs/CHELSA_summer_temp_fits_summer.Rdata")
+load("Stan_outputs/CHELSA_summer_temp_fits_summer_poly.Rdata")
+
+
+cout[cout$Param %in% c("gamma0","gamma1","gamma2","gamma3","gamma5"),] #these will tell you about the "significance" of your environmental predictors
+cout[cout$Param %in% c("gamma5"),] #these will tell you about the "significance" of your environmental predictors
+
 
 predsout.space_CHELSA_summer_temp <-
   cout[cout$Param %in% c("preds"), ]
@@ -1643,7 +1712,17 @@ jags.dat_CHELSA_summer_precip <- jags.dat
 
 # Load figure data
 
-load("users/hthomas/tea/Stan_outputs/CHELSA_summer_precip_fits_summer.Rdata")
+parameter_chprecip <- data.table(readRDS("Stan_outputs/parameter_sample/CH_precip_parameter_poly.Rdata"))
+parameter_chprecip[grepl("gamma5",name),quantile(parameter,c(0.025,0.05,0.1,0.9,0.95,0.975)),by = name]
+
+
+load("Stan_outputs/CHELSA_summer_precip_fits_summer.Rdata")
+load("Stan_outputs/CHELSA_summer_precip_fits_summer_poly.Rdata")
+
+
+cout[cout$Param %in% c("gamma0","gamma1","gamma2","gamma3","gamma5"),] #these will tell you about the "significance" of your environmental predictors
+cout[cout$Param %in% c("gamma5"),] #these will tell you about the "significance" of your environmental predictors
+
 
 predsout.space_CHELSA_summer_precip <-
   cout[cout$Param %in% c("preds"), ]
@@ -1966,7 +2045,18 @@ jags.dat_ESA_moisture <- jags.dat
 
 # Load figure data
 
-load("users/hthomas/tea/Stan_outputs/ESA_moisture_fits_summer.Rdata")
+parameter_esamoist <- data.table(readRDS("Stan_outputs/parameter_sample/ESA_moist_parameter_poly.Rdata"))
+parameter_esamoist[grepl("gamma5",name),quantile(parameter,c(0.025,0.05,0.1,0.9,0.95,0.975)),by = name]
+
+
+
+load("Stan_outputs/ESA_moisture_fits_summer.Rdata")
+load("Stan_outputs/ESA_moisture_fits_summer_poly.Rdata")
+
+
+cout[cout$Param %in% c("gamma0","gamma1","gamma2","gamma3","gamma5"),] #these will tell you about the "significance" of your environmental predictors
+cout[cout$Param %in% c("gamma5"),] #these will tell you about the "significance" of your environmental predictors
+
 
 predsout.space_ESA_moisture <- cout[cout$Param %in% c("preds"), ]
 predsout.space_ESA_moisture$ESA_moisture <-
@@ -2845,7 +2935,7 @@ jags.dat_soil_interaction <- jags.dat
 
 # Load figure data
 
-load("users/hthomas/tea/Stan_outputs/soiltemp_moisture_fits_tea_int_unscaled.Rdata")
+load("Stan_outputs/soiltemp_moisture_fits_tea_int_unscaled.Rdata")
 
 predsout.space_soil_moisture <- cout[cout$Param %in% c("preds"), ]
 predsout.space_soil_moisture$soiltemp <-
@@ -3343,7 +3433,9 @@ season_narm_r_gridded <- season_narm_r
     ggtitle("i)")
 )
 
-pdf(file = "users/hthomas/tea/figures/Env_biome.pdf",
+#### merging the plots
+
+pdf(file = "figures/Env_biome.pdf",
     width = 11.5,
     height = 10.5)
 grid.arrange(
@@ -3360,7 +3452,65 @@ grid.arrange(
 )
 dev.off()
 
-pdf(file = "uusers/hthomas/tea/figures/Env_biome_alternative.pdf",
+pdf(file = "figures/Env_biome_polynomial.pdf",
+    width = 11.5,
+    height = 7)
+grid.arrange(air,
+             soil,
+             moisture,
+             CHELSA_summer_temp,
+             CHELSA_summer_precip,
+             ESA_moisture,
+             nrow = 2)
+dev.off()
+
+
+
+#### Figure ####
+
+
+pdf(file = "figures/Env_biome_polynomial.pdf",
+    width = 11.5,
+    height = 7)
+grid.arrange(air + annotate("text",x = 15, y =0.8 , label = "*",size=9),
+             soil,
+             moisture + annotate("text",x = 93, y =0.8 , label = "*",size=9),
+             CHELSA_summer_temp,
+             CHELSA_summer_precip,
+             ESA_moisture,
+             nrow = 2)
+dev.off()
+
+
+
+
+load("Stan_outputs/airtemp_only_fits_summer.Rdata")
+predsout.space_air <-  cout[cout$Param %in% c("preds") , ]
+load("Stan_outputs/airtemp_only_fits_summer_poly.Rdata")
+
+
+polynomial_models <- list.files("Stan_outputs",full.names = T)
+polynomial_models <- grep("fits_summer_poly",polynomial_models,value = T)
+
+#### Export parameter table ####
+
+library(foreach)
+table_of_parameter <- foreach(i = polynomial_models[c(1,6,5,3,2,4)], .combine = rbind)%do%{
+  load(i)
+  res <- cout[cout$Param %in% c("gamma0","gamma1","gamma5") , c("mean","sd","2.5%","97.5%","n_eff")]
+  res
+}
+tmp <- table_of_parameter$n_eff
+table_of_parameter <- signif(table_of_parameter,3)
+table_of_parameter$n_eff <- round(tmp)
+
+write.table(table_of_parameter,"polynomial_models.csv",row.names = F,sep=",")
+
+
+cout[cout$Param %in% c("gamma0","gamma1","gamma2","gamma3","gamma5"),] #these will tell you about the "significance" of your environmental predictors
+cout[cout$Param %in% c("gamma5"),] 
+
+pdf(file = "figures/Env_biome_linear_and_polynomial.pdf",
     width = 11.5,
     height = 7)
 grid.arrange(air,

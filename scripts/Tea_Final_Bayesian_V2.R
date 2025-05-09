@@ -52,7 +52,7 @@ se <- function(x)
   sqrt(var(x, na.rm = T) / length(x))
 
 #Import data####
-tea <- read.csv(file = "users/hthomas/tea/data/teabag_data_update.csv")
+tea <- read.csv(file = "data/teabag_data_update.csv",encoding = "UTF-8")
 
 tea$Tea_init <-
   as.numeric(as.character(tea$Tea_init)) #Convert to number
@@ -526,7 +526,7 @@ for (i in 1:6) {
 
 #write.csv(tea,"scripts/users/hthomas/tea/combined_tea.csv")
 
-tea <- read.csv("scripts/users/hthomas/tea/combined_tea.csv")
+tea <- read.csv("data/combined_tea.csv",encoding = "UTF-8")
 
 tea_stats <- tea %>%
   group_by(Region, Site) %>%
@@ -569,7 +569,7 @@ tea[3251, ]
 
 #Tea comparison figure####
 litter_Haydn <-
-  read.csv("scripts/users/hthomas/Data/Litterbags_2017.csv")
+  read.csv("data/Litterbags_2017.csv")
 litter_Haydn$Species
 
 
@@ -638,7 +638,7 @@ all <-
     panel.grid.minor = element_blank(),
     axis.line = element_line(colour = "black")
   ) +
-  labs(y = "Desnity", x = "% Mass Loss") +
+  labs(y = "Density", x = "% Mass Loss") +
   ggtitle("All incubations")
 
 ambs <-
@@ -657,7 +657,7 @@ ambs <-
     panel.grid.minor = element_blank(),
     axis.line = element_line(colour = "black")
   ) +
-  labs(y = "Desnity", x = "% Mass Loss") +
+  labs(y = "Density", x = "% Mass Loss") +
   ggtitle("Ambient incubations")
 
 summer_dens <-
@@ -676,7 +676,7 @@ summer_dens <-
     panel.grid.minor = element_blank(),
     axis.line = element_line(colour = "black")
   ) +
-  labs(y = "Desnity", x = "% Mass Loss") +
+  labs(y = "Density", x = "% Mass Loss") +
   ggtitle("Summer incubations")
 
 grid.arrange(all, ambs, summer_dens)
@@ -735,8 +735,7 @@ ggplot(tea_grouped_green, aes(Red, Green)) +
   ggtitle("Rooibos vs green tea decomposition")
 dev.off()
 
-#Relationships: 1) Air Temp, 2) Soil Temp, 3) Soil Moisture, 4) CHELSA Temp####
-#5) CHELSA Precip, 6) ESA Moisture####
+#Relationships: 1) Air Temp, 2) Soil Temp, 3) Soil Moisture, 4) CHELSA Temp5) CHELSA Precip, 6) ESA Moisture####
 
 #Seasons: i) Summer, ii) Winter, iii) Year
 
@@ -748,9 +747,11 @@ season.list <- c("summer", "winter", "year")
 #Set Variable
 var.list <- c("Loss", "Loss_Day", "k", "TBI_k", "TBI_S")
 plots <- list()
-
+library(MCMCglmm)
+library(lme4)
+library(broom.mixed)
 for (i in 1:5) {
-  i = 5
+  i = 1
   #Get column number
   var.num <- which(colnames(summer) == var.list[i])
   
@@ -1509,6 +1510,8 @@ for (i in 1:5) {
          sum_ESA_moist)
   
 }
+
+library(gridExtra)
 
 grid.arrange(
   air_fig_Loss_summer,

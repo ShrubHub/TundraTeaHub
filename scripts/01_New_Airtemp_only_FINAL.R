@@ -43,7 +43,7 @@ library(postMCMCglmm)
 #### CHOOSE TRAIT NAME AND CLIMATE VARIABLE HERE ----
 
 ###Read in tea
-tea<-read.csv("scripts/users/hthomas/tea/combined_tea.csv", stringsAsFactors = F)
+tea<-read.csv("data/combined_tea.csv", stringsAsFactors = F)
 
 #Remove daily tea - too confusing!
 tea<-subset(tea,!grepl("CG_DT_HT",tea$Plot))
@@ -102,6 +102,9 @@ season_narm_r$MultipleSites <- ifelse(season_narm_r$ESA_cell %in% count.sites$ES
 count.plots <- ddply(season_narm_r, c("ESA_cell", "Site"), summarise, n.plots = length(unique(Plot)))
 season_narm_r$MultiplePlots <- ifelse(season_narm_r$Site %in% count.plots$Site[count.plots$n.plots > 1], 1, 0)
 
+count.plots <- ddply(season_narm_r, c("ESA_cell"), summarise, n.plots = length(unique(Plot)))
+season_narm_r$MultiplePlots_Region <- ifelse(season_narm_r$ESA_cell %in% count.plots$ESA_cell[count.plots$n.plots > 1], 1, 0)
+
 
 #Add env.levels (original)
 season_narm_r$envlevel<-ifelse(season_narm_r$airtemp_mean_var_level=="Region",0,
@@ -110,7 +113,7 @@ season_narm_r$envlevel<-ifelse(season_narm_r$airtemp_mean_var_level=="Region",0,
 #Add env.levels (alternative)
 #Add env.levels (new - based on nestedness)
 env.levels<- season_narm_r %>%
-  select(airtemp_mean,ESA_cell,Site,Plot) 
+  dplyr::select(airtemp_mean,ESA_cell,Site,Plot) 
 
 season_narm_r$envlevel<-0
 
@@ -171,7 +174,7 @@ season_narm_r$Days<-scale(season_narm_r$Days, center = TRUE, scale = FALSE)
 #AB: caluclate mean and sd per site - YOU CAN THINK ABOUT WHETHER YOU WANT THIS TO BE THE OVERALL MEAN OR THE MEAN OF MEANS - MEAN OF MEANS MIGHT BE BETTER IN THIS CASE
 season_narm_r_sites<-season_narm_r %>%
   group_by(SiteNum) %>%
-  summarise(airtemp_mean_site = mean(airtemp_mean),
+  dplyr::summarise(airtemp_mean_site = mean(airtemp_mean),
             airtemp_sd_site = sd(airtemp_mean))
 
 season_narm_r$airtemp_mean_site<-season_narm_r_sites$airtemp_mean_site[match(season_narm_r$SiteNum, season_narm_r_sites$SiteNum)]
@@ -183,7 +186,7 @@ season_narm_r$airtemp_sd_site[is.na(season_narm_r$airtemp_sd_site)] <- 0.01
 #AB: caluclate mean and sd per region - YOU CAN THINK ABOUT WHETHER YOU WANT THIS TO BE THE OVERALL MEAN OR THE MEAN OF MEANS - MEAN OF MEANS MIGHT BE BETTER IN THIS CASE
 season_narm_r_regions<-season_narm_r %>%
   group_by(RegionNum) %>%
-  summarise(airtemp_mean_region = mean(airtemp_mean),
+  dplyr::summarise(airtemp_mean_region = mean(airtemp_mean),
             airtemp_sd_region = sd(airtemp_mean))
 
 season_narm_r$airtemp_mean_region<-season_narm_r_regions$airtemp_mean_region[match(season_narm_r$RegionNum, season_narm_r_regions$RegionNum)]
@@ -196,7 +199,7 @@ season_narm_r$airtemp_sd_region[is.na(season_narm_r$airtemp_sd_region)] <- 0.01
 #Add mean days per region
 season_narm_r<-season_narm_r %>%
   group_by(SiteNum) %>%
-  mutate(SiteDays = mean(Days),
+  dplyr::mutate(SiteDays = mean(Days),
          SiteDays_sd = sd(Days))
 
 season_narm_r$SiteDays_sd[season_narm_r$SiteDays_sd==0 | is.na(season_narm_r$SiteDays_sd)] <- 0.001
@@ -204,7 +207,7 @@ season_narm_r$SiteDays_sd[season_narm_r$SiteDays_sd==0 | is.na(season_narm_r$Sit
 #Add mean days per region
 season_narm_r<-season_narm_r %>%
   group_by(RegionNum) %>%
-  mutate(RegionDays = mean(Days),
+  dplyr::mutate(RegionDays = mean(Days),
          RegionDays_sd = sd(Days))
 
 season_narm_r$RegionDays_sd[season_narm_r$RegionDays_sd==0 | is.na(season_narm_r$RegionDays_sd)] <- 0.001
@@ -216,7 +219,8 @@ max_soil<-max(season_narm_r$airtemp_mean,na.rm=TRUE)
 min_airtemp<-min(season_narm_r$airtemp_mean,na.rm=TRUE)
 max_airtemp<-max(season_narm_r$airtemp_mean,na.rm=TRUE)
 
-xhats <- expand.grid(xhat1=seq(min_airtemp, max_airtemp,by=0.01), xhat3 = mean_burial) #AB: predicting soil airtemp at 25% and 75% (assuming you will graph temperature as continuous) but of course you can change this to whatever you want
+xhats <- expand.grid(xhat1=seq(min_airtemp, max_airtemp,by=0.01), 
+                     xhat3 = mean_burial) #AB: predicting soil airtemp at 25% and 75% (assuming you will graph temperature as continuous) but of course you can change this to whatever you want
 
 
 
@@ -433,19 +437,27 @@ write("
       
       }
       
-      ","scripts/users/hthomas/Tea/airtemp_loss_3.stan")
+      ","Stan_scripts/airtemp_loss_3.stan")
 
 
 
-stanc('scripts/users/hthomas/Tea/airtemp_loss_3.stan') #check model
+stanc('Stan_scripts/airtemp_loss_3.stan') #check model
 
-options(mc.cores = parallel::detectCores())
+options(mc.cores = parallel::detectCores()-6)
 
 initsA <- list(ap=rep(0.6,jags.dat$NPlot), aMeanRegion=rep(0.6,jags.dat$NRegion),as=rep(0.6,jags.dat$NSite))
 initsB <- list(ap=rep(0.3,jags.dat$NPlot), aMeanRegion=rep(0.3,jags.dat$NRegion),as=rep(0.3,jags.dat$NSite))
 inits <- list(initsA, initsB)
 
-fit_space <- stan(file = 'scripts/users/hthomas/Tea/airtemp_loss_3.stan', data = jags.dat, init=inits, iter = 15000, chains = 2, thin = 1, verbose = TRUE, control=list(adapt_delta=0.99,max_treedepth = 15), algorithm = "NUTS") 
+fit_space <- stan(file = 'Stan_scripts/airtemp_loss_3.stan',
+                  data = jags.dat, 
+                  init=inits, 
+                  iter = 15000, 
+                  chains = 2, 
+                  thin = 1, 
+                  verbose = TRUE, 
+                  control=list(adapt_delta=0.99,max_treedepth = 15), 
+                  algorithm = "NUTS") 
 
 
 s = summary(fit_space)
