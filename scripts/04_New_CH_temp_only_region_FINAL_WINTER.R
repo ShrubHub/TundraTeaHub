@@ -42,7 +42,7 @@ library(postMCMCglmm)
 #### CHOOSE TRAIT NAME AND CLIMATE VARIABLE HERE ----
 
 ###Read in tea
-tea<-read.csv("scripts/users/hthomas/tea/combined_tea.csv", stringsAsFactors = F)
+tea<-read.csv("data/combined_tea.csv", stringsAsFactors = F)
 
 #Remove daily tea - too confusing!
 tea<-subset(tea,!grepl("CG_DT_HT",tea$Plot))

@@ -72,12 +72,23 @@ tea_litter[tea_litter$Species == "Green Tea", ]$Species <- "green tea"
 tea_litter[tea_litter$Species == "Rooibos Tea", ]$Species <-
   "rooibos tea"
 
-pdf(file = "users/hthomas/tea/figures/tea_litterbed.pdf",
-    width = 6,
-    height = 5)
+#### taxonomy update 2025
+tea_litter[tea_litter$Species == "Cetraria cucculata", ]$Species <- "Nephromopsis cucullata"
+tea_litter[tea_litter$Species == "Equisetum avense", ]$Species <- "Equisetum arvense"
+
+Nephromopsis cucullata
+
+Equisetum arvense 
+
+
+
+# pdf(file = "users/hthomas/tea/figures/tea_litterbed.pdf",
+#     width = 6,
+#     height = 5)
+
 (
  tea_litter_plot <-  ggplot(tea_litter, aes(
-    reorder(factor(Species), Average, median), Average * 100, fill = Type
+    reorder(factor(Species), Average, median), Average * 100, fill = Type 
   )) +
     geom_boxplot() +
     labs(y = "% Mass loss", x = "") +
@@ -101,7 +112,10 @@ pdf(file = "users/hthomas/tea/figures/tea_litterbed.pdf",
     theme(legend.position = "none") +
     theme(axis.text.x = element_text(face = "italic"))
 )
-dev.off()
+#dev.off()
+
+ggsave(plot = tea_litter_plot,file.path("figures","Fig2_Tea_litterbed.pdf"),width = 6, height = 5)
+ggsave(plot = tea_litter_plot,file.path("figures","Fig2_Tea_litterbed.svg"),width = 6, height = 5)
 
 ggplot(litter1yr, aes(reorder(factor(Species), Average, median), Average, fill =
                         factor(Origin))) +
@@ -146,14 +160,14 @@ TTT_traits_CN_species <- TTT_traits_CN[species_name%in% studied_species,]
 # green
 2.019 - 0.246 
 
-teabag_dt <- data.table(species_name= c("green tea","rooibos tea"), 
+teabag_dt <- data.table(species_name= c("Green tea","Rooibos tea"), 
                         C_content= c(49.055,50.511)*10, 
                         N_content= c(4.02,1.185)*10, CN_ratio= c(12.23,42.87))
 
 
 (tundra_species_C_N_plot <- ggplot(TTT_traits_CN,aes(x=C_content/10,y=N_content/10))+
   geom_point(color="grey70") +
-  geom_point(data = TTT_traits_CN_species,fill="cadetblue",size=3,pch=21) +
+  geom_point(data = TTT_traits_CN_species,fill="#FFB90F",size=3,pch=21) +
   geom_text_repel(data = rbind(teabag_dt,TTT_traits_CN_species),aes(label =species_name ),size= 4,nudge_y = 0.25,min.segment.length = 0.75,fontface= c("plain" ,"plain",rep("italic",9 ))) +
   geom_point(data=teabag_dt,aes(fill=species_name),size=4,pch=21,alpha=0.85,show.legend = F)+
   scale_fill_manual(values =c("#00b100","#9A0C0C"))+

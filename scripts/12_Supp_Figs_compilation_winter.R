@@ -1492,7 +1492,7 @@ jags.dat_CHELSA_winter_temp <- jags.dat
 
 # Load figure data
 
-load("users/hthomas/tea/Stan_outputs/CHELSA_winter_temp_fits_winter.Rdata")
+load("Stan_outputs/CHELSA_winter_temp_fits_winter.Rdata")
 
 subset(cout, Param == "gamma0")
 subset(cout, Param == "gamma1")

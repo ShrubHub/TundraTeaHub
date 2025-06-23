@@ -41,7 +41,7 @@ library(lubridate)
 
 # Read in base data ----
 tea <-
-  read.csv(file = "users/hthomas/tea/data/teabag_data_update.csv")
+  read.csv(file = "data/teabag_data_update.csv")
 
 tea$Burial <- as.Date(tea$Burial, format = "%d/%m/%Y")
 tea$Recovery <- as.Date(tea$Recovery, format = "%d/%m/%Y")
